@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { storage } from './firebaseConfig';
 import { ref, uploadBytes } from "firebase/storage";
 import { getGeminiResponse } from './gemini';
+import ChatLounge from './components/ChatLounge';
+import QuizArena from './components/QuizArena';
 
 function App() {
   const [file, setFile] = useState(null);
@@ -9,6 +11,9 @@ function App() {
   const [studyDays, setStudyDays] = useState(7);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState({ roadmap: [], library: [], youtube: [] });
+  
+  // This is the variable that holds the context for the Chat & Quiz
+  const [fullSyllabusText, setFullSyllabusText] = useState("");
 
   // Helper to convert the file into a format Gemini understands
   const fileToGenerativePart = async (file) => {
@@ -74,6 +79,11 @@ function App() {
       const cleanJson = responseText.replace(/```json|```/g, "");
       const aiData = JSON.parse(cleanJson);
 
+      // ---------------------------------------------------------
+      // 🔥 CRITICAL FIX: This sends the roadmap data to Chat & Quiz
+      setFullSyllabusText(JSON.stringify(aiData)); 
+      // ---------------------------------------------------------
+
       const searchQuery = aiData.youtubeSearchQuery || extraTopics || "Education";
       const realVideos = await fetchRealYouTubeVideos(searchQuery);
 
@@ -85,6 +95,7 @@ function App() {
 
     } catch (error) {
       console.error("Analysis Error:", error);
+      alert("Something went wrong with the AI. Please try again.");
     }
     setLoading(false);
   };
@@ -99,7 +110,8 @@ function App() {
       </header>
 
       <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <section className="space-y-6 bg-slate-900/40 p-8 rounded-3xl border border-white/5 backdrop-blur-xl">
+        {/* LEFT COLUMN: INPUTS */}
+        <section className="space-y-6 bg-slate-900/40 p-8 rounded-3xl border border-white/5 backdrop-blur-xl h-fit">
           <label className="block text-xs font-bold text-blue-400 uppercase tracking-widest">1. Syllabus Upload</label>
           <div className="w-full">
             <label htmlFor="file-upload" className="w-full flex flex-col items-center justify-center bg-blue-600/10 hover:bg-blue-600/20 border-2 border-dashed border-blue-600/30 rounded-2xl py-6 cursor-pointer transition-all">
@@ -121,13 +133,15 @@ function App() {
           </button>
         </section>
 
+        {/* RIGHT COLUMN: ROADMAP & LIBRARY */}
         <section className="lg:col-span-2 space-y-6">
           <div className="bg-slate-900/40 p-8 rounded-3xl border border-white/5">
             <h2 className="text-2xl font-bold mb-6 border-l-4 border-blue-500 pl-4">Roadmap</h2>
             <div className="grid gap-4">
+              {data.roadmap.length === 0 && <p className="text-slate-500 italic">Your plan will appear here...</p>}
               {data.roadmap.map((day, i) => (
-                <div key={i} className="flex gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
-                  <div className="h-8 w-8 bg-blue-600/20 text-blue-400 rounded-full flex items-center justify-center text-xs font-bold">D{day.day}</div>
+                <div key={i} className="flex gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
+                  <div className="h-8 w-8 bg-blue-600/20 text-blue-400 rounded-full flex items-center justify-center text-xs font-bold shrink-0">D{day.day}</div>
                   <div><h4 className="font-bold text-white text-sm">{day.topic}</h4><p className="text-xs text-slate-400">{day.task}</p></div>
                 </div>
               ))}
@@ -137,6 +151,7 @@ function App() {
           <div className="bg-slate-900/40 p-8 rounded-3xl border border-white/5">
             <h2 className="text-xl font-bold text-purple-400 mb-4 flex items-center">📚 Library Archive</h2>
             <div className="flex flex-wrap gap-2">
+              {data.library.length === 0 && <p className="text-slate-500 italic text-xs">Recommended books will appear here...</p>}
               {data.library.map((book, i) => (
                 <div key={i} className="px-3 py-1 bg-black border border-white/10 rounded-full text-[10px] text-slate-300">
                   <span className="font-bold text-purple-400">{book.title}</span> – {book.author}
@@ -146,6 +161,12 @@ function App() {
           </div>
         </section>
       </main>
+
+      {/* NEW INTERACTIVE SECTION: CHAT & QUIZ */}
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10">
+        <ChatLounge extractedText={fullSyllabusText} />
+        <QuizArena extractedText={fullSyllabusText} />
+      </div>
 
       {/* YOUTUBE SECTION */}
       {data.youtube && data.youtube.length > 0 && (
@@ -157,7 +178,7 @@ function App() {
                 <div className="relative aspect-video overflow-hidden bg-slate-800">
                   <img src={`https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`} className="w-full h-full object-cover group-hover:scale-105 transition-all" onError={(e) => { e.target.src = `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`; }} />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-transparent transition-all">
-                    <div className="h-12 w-12 bg-red-600 rounded-full flex items-center justify-center shadow-2xl">▶</div>
+                    <div className="h-12 w-12 bg-red-600 rounded-full flex items-center justify-center shadow-2xl scale-90 group-hover:scale-110 transition-transform">▶</div>
                   </div>
                 </div>
                 <div className="p-5 flex-grow"><h4 className="font-bold text-white text-sm line-clamp-2">{video.title}</h4><p className="text-[10px] text-slate-500 italic mt-2 leading-relaxed">"{video.reason}"</p></div>
