@@ -4,6 +4,7 @@ import { ref, uploadBytes } from "firebase/storage";
 import { getGeminiResponse } from './gemini';
 import ChatLounge from './components/ChatLounge';
 import QuizArena from './components/QuizArena';
+import VivaVoce from './components/VivaVoce';
 
 function App() {
   const [file, setFile] = useState(null);
@@ -162,10 +163,12 @@ function App() {
         </section>
       </main>
 
-      {/* NEW INTERACTIVE SECTION: CHAT & QUIZ */}
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10">
+      
+      {/* NEW INTERACTIVE SECTION: CHAT, QUIZ, & VIVA */}
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 mt-10">
         <ChatLounge extractedText={fullSyllabusText} />
         <QuizArena extractedText={fullSyllabusText} />
+        <VivaVoce extractedText={fullSyllabusText} />
       </div>
 
       {/* YOUTUBE SECTION */}
