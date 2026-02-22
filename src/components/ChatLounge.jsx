@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getGeminiResponse } from '../gemini'; // Uses your working API file!
 
 const ChatLounge = ({ extractedText }) => {
   const [messages, setMessages] = useState([
@@ -8,8 +8,6 @@ const ChatLounge = ({ extractedText }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
-
-  const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -21,6 +19,15 @@ const ChatLounge = ({ extractedText }) => {
 
   const handleSend = async () => {
     if (!input.trim()) return;
+
+    if (!extractedText) {
+      setMessages(prev => [...prev, 
+        { role: 'user', text: input },
+        { role: 'ai', text: "⚠️ I can't answer yet! Please upload a syllabus and click 'GENERATE ROADMAP' first so I have data to work with." }
+      ]);
+      setInput('');
+      return; 
+    }
     
     const userMsg = { role: 'user', text: input };
     setMessages(prev => [...prev, userMsg]);
@@ -28,23 +35,21 @@ const ChatLounge = ({ extractedText }) => {
     setIsLoading(true);
 
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
       const prompt = `
         Context: The user has a study plan with this data: 
-        "${extractedText ? extractedText.substring(0, 15000) : 'No plan yet'}".
+        "${extractedText.substring(0, 15000)}".
         
         User Question: ${input}
         
         Answer as a helpful, encouraging tutor. If the context doesn't have the answer, use your general knowledge to explain the concept clearly. Keep answers concise (under 100 words).
       `;
 
-      const result = await model.generateContent(prompt);
-      const response = result.response;
-      const text = response.text();
+      // Uses your perfectly working Gemini helper
+      const text = await getGeminiResponse(prompt, null);
 
       setMessages(prev => [...prev, { role: 'ai', text: text }]);
     } catch (error) {
-      console.error(error);
+      console.error("Chat Error:", error);
       setMessages(prev => [...prev, { role: 'ai', text: "I'm having trouble connecting. Please try again." }]);
     }
     setIsLoading(false);
@@ -52,13 +57,11 @@ const ChatLounge = ({ extractedText }) => {
 
   return (
     <div className="flex flex-col h-[600px] bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl relative">
-      {/* Header */}
       <div className="p-6 border-b border-white/5 bg-white/5 flex items-center gap-3">
         <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></div>
         <h2 className="text-xl font-bold text-white tracking-wide">AI TUTOR CHAT</h2>
       </div>
       
-      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
         {messages.map((msg, idx) => (
           <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -83,7 +86,6 @@ const ChatLounge = ({ extractedText }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
       <div className="p-4 bg-black/20 border-t border-white/5">
         <div className="flex gap-2 relative">
           <input

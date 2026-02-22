@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getGeminiResponse } from '../gemini'; // Uses your working API file!
 
 const QuizArena = ({ extractedText }) => {
   const [quiz, setQuiz] = useState(null);
@@ -7,15 +7,16 @@ const QuizArena = ({ extractedText }) => {
   const [score, setScore] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-
   const generateQuiz = async () => {
-    if (!extractedText) return alert("Generate a roadmap first so I know what to quiz you on!");
+    if (!extractedText) {
+      alert("⚠️ SYSTEM HALT\n\nPlease GENERATE A ROADMAP first.\nThe AI needs your syllabus data to create a quiz.");
+      return;
+    }
+
     setLoading(true);
     setScore(null);
     setAnswers({});
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
       const prompt = `
         Based on this study plan data: "${extractedText.substring(0, 15000)}", 
         generate 5 multiple choice questions to test the user's understanding of the topics.
@@ -26,12 +27,11 @@ const QuizArena = ({ extractedText }) => {
         Do not use markdown blocks. Just the raw JSON.
       `;
       
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
+      const text = await getGeminiResponse(prompt, null);
       const cleanJson = text.replace(/```json|```/g, '').trim();
       setQuiz(JSON.parse(cleanJson));
     } catch (e) {
-      console.error(e);
+      console.error("Quiz Error:", e);
       alert("Failed to generate quiz. Try again.");
     }
     setLoading(false);
@@ -47,7 +47,6 @@ const QuizArena = ({ extractedText }) => {
 
   return (
     <div className="flex flex-col h-[600px] bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl relative">
-      {/* Header */}
       <div className="p-6 border-b border-white/5 bg-white/5 flex justify-between items-center">
         <h2 className="text-xl font-bold text-white tracking-wide">⚔️ EXAMINER MODE</h2>
         {quiz && (
@@ -60,10 +59,8 @@ const QuizArena = ({ extractedText }) => {
         )}
       </div>
 
-      {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-slate-700">
         {!quiz ? (
-          // STATE: NO QUIZ (Centering the button nicely)
           <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
             <div className="w-20 h-20 bg-purple-500/10 rounded-full flex items-center justify-center border border-purple-500/20">
               <span className="text-4xl">🎓</span>
@@ -81,7 +78,6 @@ const QuizArena = ({ extractedText }) => {
             </button>
           </div>
         ) : score === null ? (
-          // STATE: QUIZ ACTIVE
           <div className="space-y-8">
             {quiz.map((q, i) => (
               <div key={q.id} className="animate-fade-in">
@@ -91,7 +87,7 @@ const QuizArena = ({ extractedText }) => {
                 </h3>
                 <div className="grid grid-cols-1 gap-2 pl-4">
                   {q.options.map((opt, idx) => {
-                    const label = ["A", "B", "C", "D"][idx]; // Map index to letter
+                    const label = ["A", "B", "C", "D"][idx]; 
                     return (
                       <button
                         key={label}
@@ -119,7 +115,6 @@ const QuizArena = ({ extractedText }) => {
             </div>
           </div>
         ) : (
-          // STATE: RESULTS
           <div className="h-full flex flex-col items-center justify-center text-center animate-fade-in">
              <div className="mb-6 relative">
                 <div className={`w-32 h-32 rounded-full flex items-center justify-center border-4 ${score > 3 ? 'border-green-500 text-green-400' : 'border-orange-500 text-orange-400'}`}>
