@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+/* This single line tells Tailwind v4 to listen to our Sun/Moon toggle button! */
+@custom-variant dark (&:where(.dark, .dark *));
+
+
