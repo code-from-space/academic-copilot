@@ -17,6 +17,58 @@ function App() {
   // THEME STATE (Default to Dark)
   const [isDarkMode, setIsDarkMode] = useState(true);
 
+
+
+  // --- REAL-TIME EXAM & HEATMAP LOGIC ---
+  const [examTimer, setExamTimer] = useState(null);
+  const [completedTasks, setCompletedTasks] = useState(new Set());
+  const [totalTasks, setTotalTasks] = useState(0);
+
+  // 1. Start timer and count total tasks whenever a NEW roadmap is generated
+  useEffect(() => {
+    if (data?.roadmap && data.roadmap.length > 0) {
+      setExamTimer({ days: Math.max(0, Number(studyDays) - 1), hours: 23, minutes: 59, seconds: 59 });
+      let count = 0;
+      data.roadmap.forEach(day => { count += (day.tasks ? day.tasks.length : 0); });
+      setTotalTasks(count);
+      setCompletedTasks(new Set()); // Reset progress for new roadmap
+    }
+  }, [data.roadmap]);
+
+  // 2. Make the clock tick every second
+  useEffect(() => {
+    if (!examTimer) return;
+    const timer = setInterval(() => {
+      setExamTimer(prev => {
+        if (!prev) return prev;
+        let { days, hours, minutes, seconds } = prev;
+        if (seconds > 0) { seconds--; }
+        else {
+          seconds = 59;
+          if (minutes > 0) { minutes--; }
+          else {
+            minutes = 59;
+            if (hours > 0) { hours--; }
+            else { hours = 23; if (days > 0) days--; }
+          }
+        }
+        return { days, hours, minutes, seconds };
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [examTimer !== null]);
+
+  // 3. Click handler for crossing off tasks
+  const toggleTask = (taskId) => {
+    setCompletedTasks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(taskId)) newSet.delete(taskId);
+      else newSet.add(taskId);
+      return newSet;
+    });
+  };
+  // ---------------------------------------
+
   // Apply the dark class to the HTML tag whenever the toggle changes
   useEffect(() => {
     if (isDarkMode) {
@@ -139,47 +191,50 @@ function App() {
       </button>
 
       <header className="max-w-6xl mx-auto mb-16 text-center pt-8">
-     <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-500">
-       STUDYFORGE
-     </h1>
-     <p className="text-slate-500 mt-2 uppercase tracking-widest text-xs font-bold">Integrated Intelligence</p>
-   </header>
+        <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-500">
+          STUDYFORGE
+        </h1>
+        <p className="text-slate-500 mt-2 uppercase tracking-widest text-xs font-bold">
+          Academic Accelerator
+        </p>
+      </header>
 
-   {/* EXAM TRIAGE DASHBOARD - NEW VIBE */}
+      {/* EXAM TRIAGE DASHBOARD - DYNAMIC VERSION */}
       <div className="max-w-6xl mx-auto mb-12 grid grid-cols-1 md:grid-cols-3 gap-6">
         
         {/* T-MINUS COUNTDOWN CLOCK */}
-        <div className="col-span-1 md:col-span-1 bg-red-500/10 border border-red-500/30 rounded-3xl p-6 backdrop-blur-xl shadow-lg dark:bg-red-900/20 flex flex-col items-center justify-center animate-pulse">
+        <div className="col-span-1 md:col-span-1 bg-red-500/10 border border-red-500/30 rounded-3xl p-6 backdrop-blur-xl shadow-lg dark:bg-red-900/20 flex flex-col items-center justify-center transition-all">
           <h3 className="text-red-600 dark:text-red-400 font-black tracking-widest uppercase text-sm mb-2">
             Exam T-Minus
           </h3>
-          <div className="text-5xl font-black text-red-600 dark:text-red-400 font-mono tracking-tighter">
-            23:59:59
+          <div className="text-4xl md:text-5xl font-black text-red-600 dark:text-red-400 font-mono tracking-tighter">
+            {examTimer 
+              ? `${examTimer.days}d ${String(examTimer.hours).padStart(2, '0')}:${String(examTimer.minutes).padStart(2, '0')}:${String(examTimer.seconds).padStart(2, '0')}`
+              : "--:--:--"}
           </div>
           <p className="text-red-500/80 dark:text-red-400/80 text-xs mt-2 font-bold uppercase">
-            Survival Mode Engaged
+            {examTimer ? "Survival Mode Engaged" : "AWAITING SYLLABUS"}
           </p>
         </div>
 
         {/* PROGRESS HEATMAP */}
-        <div className="col-span-1 md:col-span-2 bg-white/60 dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-3xl p-6 backdrop-blur-xl shadow-xl">
+        <div className="col-span-1 md:col-span-2 bg-white/60 dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-3xl p-6 backdrop-blur-xl shadow-xl transition-all">
           <div className="flex justify-between items-end mb-4">
             <div>
               <h3 className="text-slate-800 dark:text-white font-black text-lg">Burn Rate Heatmap</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm">Syllabus concepts mastered</p>
+              <p className="text-slate-500 dark:text-slate-400 text-sm">Click roadmap tasks to log progress</p>
             </div>
-            <div className="text-green-500 font-black text-2xl">
-              24%
+            <div className="text-green-500 font-black text-2xl transition-all">
+              {totalTasks > 0 ? Math.round((completedTasks.size / totalTasks) * 100) : 0}%
             </div>
           </div>
           
-          {/* THE GRID */}
           <div className="grid grid-cols-10 gap-2">
-            {/* Generating 30 squares to look like a GitHub heatmap */}
             {[...Array(30)].map((_, i) => {
-              // Fake logic to make some squares green to look like real data
-              const isCompleted = i < 7; 
-              const isCurrent = i === 7;
+              const percentage = totalTasks > 0 ? (completedTasks.size / totalTasks) : 0;
+              const activeSquares = Math.round(percentage * 30);
+              const isCompleted = i < activeSquares; 
+              const isCurrent = i === activeSquares && totalTasks > 0 && percentage < 1;
               
               return (
                 <div 
@@ -228,12 +283,10 @@ function App() {
             <h2 className="text-2xl font-bold mb-6 border-l-4 border-blue-500 pl-4 text-slate-800 dark:text-white">Roadmap</h2>
             <div className="grid gap-4">
               {data.roadmap.length === 0 && <p className="text-slate-500 italic">Your plan will appear here...</p>}
-              {/* CRASH-PROOF ROADMAP RENDERING */}
-              {data?.roadmap && data.roadmap.length > 0 ? (
-                data.roadmap.map((dayPlan, index) => (
+              
+              {data?.roadmap && data.roadmap.length > 0 && data.roadmap.map((dayPlan, index) => (
                   <div key={index} className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200 dark:border-white/5 shadow-lg mb-6 transition-all hover:scale-[1.01]">
                     
-                    {/* Header: Day & Topic */}
                     <div className="flex items-center justify-between mb-4 border-b border-slate-200 dark:border-white/5 pb-4">
                       <h3 className="text-2xl font-black text-slate-800 dark:text-white">Day {dayPlan?.day || index + 1}</h3>
                       <span className="px-3 py-1 bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold rounded-full text-sm">
@@ -241,91 +294,85 @@ function App() {
                       </span>
                     </div>
                     
-                    {/* Task List */}
+                    {/* INTERACTIVE Task List */}
                     <ul className="space-y-3 mb-6">
-                      {dayPlan?.tasks && dayPlan.tasks.map((task, idx) => (
-                        <li key={idx} className="flex items-start gap-3 text-slate-600 dark:text-slate-300 font-medium">
-                          <span className="text-green-500 mt-0.5 text-lg">✓</span> {task}
-                        </li>
-                      ))}
+                      {dayPlan?.tasks && dayPlan.tasks.map((task, idx) => {
+                        const taskId = `day${index}-task${idx}`;
+                        const isDone = completedTasks.has(taskId);
+                        return (
+                          <li 
+                            key={idx} 
+                            onClick={() => toggleTask(taskId)}
+                            className={`flex items-start gap-3 font-medium cursor-pointer transition-all duration-300 p-2 -ml-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 ${
+                              isDone ? 'opacity-40 line-through text-slate-500' : 'text-slate-600 dark:text-slate-300'
+                            }`}
+                          >
+                            <span className={`mt-0.5 text-lg transition-colors ${isDone ? 'text-slate-500' : 'text-green-500'}`}>✓</span> 
+                            {task}
+                          </li>
+                        );
+                      })}
                     </ul>
 
-                    {/* THE YOUTUBE TIMESTAMP SECTION */}
-                    {/* THE UPGRADED YOUTUBE THUMBNAIL SECTION */}
-                  {dayPlan.youtube_query && (
-                    <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-500/20 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between shadow-sm transition-all hover:border-red-400 dark:hover:border-red-500/50">
-                      
-                      {/* Video Thumbnail & Title Link */}
-                      <div className="flex items-center gap-4 flex-1">
-                        {dayPlan.video ? (
-                          <a 
-                            href={`https://www.youtube.com/watch?v=${dayPlan.video.videoId}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="relative shrink-0 group block overflow-hidden rounded-lg shadow-md"
-                          >
-                            {/* Fetch the high-quality YouTube thumbnail */}
-                            <img 
-                              src={`https://img.youtube.com/vi/${dayPlan.video.videoId}/hqdefault.jpg`} 
-                              alt="Video Thumbnail" 
-                              className="w-32 md:w-40 aspect-video object-cover group-hover:scale-105 transition-transform duration-300" 
-                            />
-                            <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors flex items-center justify-center">
-                              <div className="bg-red-600 text-white rounded-full p-2 w-8 h-8 flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
-                                ▶
+                    {/* OVERFLOW-FIXED YOUTUBE THUMBNAIL SECTION */}
+                    {dayPlan.youtube_query && (
+                      <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-500/20 rounded-xl p-4 flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between shadow-sm transition-all hover:border-red-400 dark:hover:border-red-500/50">
+                        
+                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                          {dayPlan.video ? (
+                            <a href={`https://www.youtube.com/watch?v=${dayPlan.video.videoId}`} target="_blank" rel="noopener noreferrer" className="relative shrink-0 group block overflow-hidden rounded-lg shadow-md">
+                              <img src={`https://img.youtube.com/vi/${dayPlan.video.videoId}/hqdefault.jpg`} alt="Video Thumbnail" className="w-32 md:w-40 aspect-video object-cover group-hover:scale-105 transition-transform duration-300" />
+                              <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors flex items-center justify-center">
+                                <div className="bg-red-600 text-white rounded-full p-2 w-8 h-8 flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">▶</div>
                               </div>
-                            </div>
-                          </a>
-                        ) : (
-                          <div className="w-32 md:w-40 aspect-video bg-red-100 dark:bg-red-500/20 rounded-lg flex items-center justify-center shrink-0">
-                            ▶️
+                            </a>
+                          ) : (
+                            <div className="w-32 md:w-40 aspect-video bg-red-100 dark:bg-red-500/20 rounded-lg flex items-center justify-center shrink-0">▶️</div>
+                          )}
+                          
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-widest mb-1">Targeted Lesson</p>
+                            <a href={dayPlan.video ? `https://www.youtube.com/watch?v=${dayPlan.video.videoId}` : `https://www.youtube.com/results?search_query=${dayPlan.youtube_query}`} target="_blank" rel="noopener noreferrer" className="text-slate-800 dark:text-white font-bold text-sm md:text-base hover:text-red-600 dark:hover:text-red-400 transition-colors line-clamp-2">
+                              {dayPlan.video ? dayPlan.video.title : `Search: "${dayPlan.youtube_query}"`}
+                            </a>
+                          </div>
+                        </div>
+                        
+                        {/* OVERFLOW HIDDEN: This stops the AI from breaking your card if it generates a huge string */}
+                        {dayPlan.timestamp && (
+                          <div className="bg-white dark:bg-slate-900 border border-red-200 dark:border-red-500/30 px-5 py-3 rounded-lg text-center shrink shadow-md max-w-full overflow-hidden">
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mb-1">Critical Window</p>
+                            <p className="text-red-600 dark:text-red-400 font-black font-mono text-lg md:text-xl animate-pulse truncate" title={dayPlan.timestamp}>
+                              ⏱ {dayPlan.timestamp}
+                            </p>
                           </div>
                         )}
                         
-                        <div>
-                          <p className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-widest mb-1">Targeted Lesson</p>
-                          <a 
-                            href={dayPlan.video ? `https://www.youtube.com/watch?v=${dayPlan.video.videoId}` : `https://www.youtube.com/results?search_query=${dayPlan.youtube_query}`}
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-slate-800 dark:text-white font-bold text-sm md:text-base hover:text-red-600 dark:hover:text-red-400 transition-colors line-clamp-2"
-                          >
-                            {dayPlan.video ? dayPlan.video.title : `Search: "${dayPlan.youtube_query}"`}
-                          </a>
-                        </div>
                       </div>
-                      
-                      {/* Critical Timestamp Box */}
-                      {dayPlan.timestamp && (
-                        <div className="bg-white dark:bg-slate-900 border border-red-200 dark:border-red-500/30 px-5 py-3 rounded-lg text-center shrink-0 shadow-md">
-                          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mb-1">Critical Window</p>
-                          <p className="text-red-600 dark:text-red-400 font-black font-mono text-lg md:text-xl animate-pulse">
-                            ⏱ {dayPlan.timestamp}
-                          </p>
-                        </div>
-                      )}
-                      
-                    </div>
-                  )}
-
+                    )}
                   </div>
-                ))
-              ) : (
-                <div className="text-center text-slate-500 p-8">
-                  {/* Shows this if no roadmap exists yet to prevent crashes */}
-                  Roadmap will appear here once generated...
-                </div>
-              )}
+              ))}
             </div>
           </div>
 
+          {/* COLOR-CORRECTED LIBRARY ARCHIVE */}
           <div className="bg-white/60 dark:bg-slate-900/40 p-8 rounded-3xl border border-slate-200 dark:border-white/5 backdrop-blur-xl shadow-xl dark:shadow-none transition-colors duration-500">
             <h2 className="text-xl font-bold text-purple-600 dark:text-purple-400 mb-4 flex items-center">📚 Library Archive</h2>
             <div className="flex flex-wrap gap-2">
               {data.library.length === 0 && <p className="text-slate-500 italic text-xs">Recommended books will appear here...</p>}
               {data.library.map((book, i) => (
-                <div key={i} className="px-3 py-1 bg-white dark:bg-black border border-slate-200 dark:border-white/10 rounded-full text-[10px] text-slate-700 dark:text-slate-300 shadow-sm dark:shadow-none">
-                  <span className="font-bold text-purple-600 dark:text-purple-400">{book.title}</span> – {book.author}
+                <div key={i} className="px-4 py-2 bg-slate-50 dark:bg-[#0f111a] border border-slate-200 dark:border-white/10 rounded-full text-[11px] shadow-sm flex items-center gap-1">
+                  {book.title && book.title.toLowerCase().includes(' by ') ? (
+                    <>
+                      <span className="font-bold text-purple-600 dark:text-purple-400">{book.title.split(/ by /i)[0]}</span>
+                      <span className="text-slate-500 dark:text-slate-400 italic">by {book.title.split(/ by /i)[1].replace(/ -$/, '')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-bold text-purple-600 dark:text-purple-400">{book.title.replace(/ -$/, '')}</span>
+                      {book.author && <span className="text-slate-500 dark:text-slate-400 italic">by {book.author.replace(/ -$/, '')}</span>}
+                    </>
+                  )}
                 </div>
               ))}
             </div>
@@ -360,62 +407,35 @@ function App() {
         </section>
       )}
 
-
-
-
-
-
-
-
-
-
-
       {/* DEVELOPER CONTACT FOOTER */}
       <footer className="max-w-6xl mx-auto mt-12 mb-8 bg-white/60 dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-3xl p-8 backdrop-blur-xl shadow-xl dark:shadow-none text-center transition-colors duration-500">
         <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-6">
           Connect with the Developer
         </h3>
-        <div className="flex flex-wrap justify-center gap-4 md:gap-8">
+        <div className="flex flex-wrap justify-center gap-4 md:gap-6">
           
-          {/* Email */}
           <a href="mailto:your.email@example.com" className="px-6 py-3 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl font-medium hover:scale-105 transition-transform shadow-sm border border-slate-200 dark:border-white/5 flex items-center gap-2">
             ✉️ Email
           </a>
 
-          
+          <a href="tel:+910000000000" className="px-6 py-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-xl font-medium hover:scale-105 transition-transform shadow-sm border border-green-200 dark:border-green-500/20 flex items-center gap-2">
+            📞 Phone
+          </a>
 
-          {/* LinkedIn */}
           <a href="https://linkedin.com/in/yourprofile" target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-xl font-medium hover:scale-105 transition-transform shadow-sm border border-blue-200 dark:border-blue-500/20 flex items-center gap-2">
             💼 LinkedIn
           </a>
 
-          
-
-          {/* Instagram */}
           <a href="https://instagram.com/yourhandle" target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 rounded-xl font-medium hover:scale-105 transition-transform shadow-sm border border-pink-200 dark:border-pink-500/20 flex items-center gap-2">
             📸 Instagram
           </a>
 
+          <a href="https://x.com/yourhandle" target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl font-medium hover:scale-105 transition-transform shadow-sm border border-slate-300 dark:border-slate-700 flex items-center gap-2">
+            𝕏 Twitter
+          </a>
+
         </div>
       </footer>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     </div>
   );
