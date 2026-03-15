@@ -71,31 +71,54 @@ function App() {
       }
 
       const prompt = `
-        Role: Academic Copilot.
-        Instruction: Analyze the attached document (if any) and these topics: ${extraTopics}.
-        Timeframe: Create a study plan for ${studyDays} days.
-        Provide a JSON response ONLY:
+        You are an elite Exam Triage AI. The user has an exam in exactly ${studyDays} days. 
+        Analyze the syllabus and extra topics: "${fullSyllabusText.substring(0, 15000)}" | "${extraTopics}"
+        
+        Return the response strictly in valid JSON format matching this exact object structure:
         {
-          "roadmap": [{"day": 1, "topic": "Topic Name", "task": "Specific task"}],
-          "library": [{"title": "Book Name", "author": "Author"}],
-          "youtubeSearchQuery": "Specific YouTube search term for these topics"
+          "roadmap": [
+            { 
+              "day": 1, 
+              "topic": "Main Concept", 
+              "tasks": ["Task 1", "Task 2"], 
+              "youtube_query": "Specific Search Query",
+              "timestamp": "12:45 - 18:20"
+            }
+          ],
+          "library": [
+            { "title": "Book/Resource Name", "reason": "Why it helps" }
+          ],
+          "youtubeSearchQuery": "One general overarching YouTube search query for this entire syllabus"
         }
+        Do not include markdown blocks like \`\`\`json. Just raw JSON.
       `;
       
-      const responseText = await getGeminiResponse(prompt, filePart);
-      const cleanJson = responseText.replace(/```json|```/g, "");
+      const responseText = await getGeminiResponse(prompt, null);
+      const cleanJson = responseText.replace(/```json|```/g, "").trim();
       const aiData = JSON.parse(cleanJson);
 
-      setFullSyllabusText(JSON.stringify(aiData)); 
+      setFullSyllabusText(JSON.stringify(aiData));
 
-      const searchQuery = aiData.youtubeSearchQuery || extraTopics || "Education";
-      const realVideos = await fetchRealYouTubeVideos(searchQuery);
+      // NEW LOGIC: Fetch a specific video for every single day in the roadmap!
+      const roadmapWithRealVideos = await Promise.all(
+        (aiData.roadmap || []).map(async (dayPlan) => {
+          if (dayPlan.youtube_query) {
+            // Use your existing function to search YouTube
+            const videos = await fetchRealYouTubeVideos(dayPlan.youtube_query);
+            // Grab the #1 top result and attach it directly to this day's data
+            dayPlan.video = videos.length > 0 ? videos[0] : null; 
+          }
+          return dayPlan;
+        })
+      );
 
+      // Save everything properly to state
       setData({
-        roadmap: aiData.roadmap,
-        library: aiData.library,
-        youtube: realVideos
+        roadmap: roadmapWithRealVideos,
+        library: aiData.library || [],
+        youtube: [] // We don't need the global sidebar videos anymore since they are in the roadmap!
       });
+      setLoading(false);
 
     } catch (error) {
       console.error("Analysis Error:", error);
@@ -116,11 +139,64 @@ function App() {
       </button>
 
       <header className="max-w-6xl mx-auto mb-16 text-center pt-8">
-        <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-500">
-          STUDY FORGE
-        </h1>
-        <p className="text-slate-500 mt-2 uppercase tracking-widest text-xs font-bold">Integrated Intelligence</p>
-      </header>
+     <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-500">
+       STUDYFORGE
+     </h1>
+     <p className="text-slate-500 mt-2 uppercase tracking-widest text-xs font-bold">Integrated Intelligence</p>
+   </header>
+
+   {/* EXAM TRIAGE DASHBOARD - NEW VIBE */}
+      <div className="max-w-6xl mx-auto mb-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        {/* T-MINUS COUNTDOWN CLOCK */}
+        <div className="col-span-1 md:col-span-1 bg-red-500/10 border border-red-500/30 rounded-3xl p-6 backdrop-blur-xl shadow-lg dark:bg-red-900/20 flex flex-col items-center justify-center animate-pulse">
+          <h3 className="text-red-600 dark:text-red-400 font-black tracking-widest uppercase text-sm mb-2">
+            Exam T-Minus
+          </h3>
+          <div className="text-5xl font-black text-red-600 dark:text-red-400 font-mono tracking-tighter">
+            23:59:59
+          </div>
+          <p className="text-red-500/80 dark:text-red-400/80 text-xs mt-2 font-bold uppercase">
+            Survival Mode Engaged
+          </p>
+        </div>
+
+        {/* PROGRESS HEATMAP */}
+        <div className="col-span-1 md:col-span-2 bg-white/60 dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-3xl p-6 backdrop-blur-xl shadow-xl">
+          <div className="flex justify-between items-end mb-4">
+            <div>
+              <h3 className="text-slate-800 dark:text-white font-black text-lg">Burn Rate Heatmap</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm">Syllabus concepts mastered</p>
+            </div>
+            <div className="text-green-500 font-black text-2xl">
+              24%
+            </div>
+          </div>
+          
+          {/* THE GRID */}
+          <div className="grid grid-cols-10 gap-2">
+            {/* Generating 30 squares to look like a GitHub heatmap */}
+            {[...Array(30)].map((_, i) => {
+              // Fake logic to make some squares green to look like real data
+              const isCompleted = i < 7; 
+              const isCurrent = i === 7;
+              
+              return (
+                <div 
+                  key={i} 
+                  className={`h-6 rounded-md transition-all duration-500 ${
+                    isCompleted 
+                      ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]' 
+                      : isCurrent 
+                        ? 'bg-orange-400 animate-pulse shadow-[0_0_10px_rgba(249,115,22,0.4)]' 
+                        : 'bg-slate-200 dark:bg-slate-800'
+                  }`}
+                ></div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
 
       <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* LEFT COLUMN: INPUTS */}
@@ -152,12 +228,94 @@ function App() {
             <h2 className="text-2xl font-bold mb-6 border-l-4 border-blue-500 pl-4 text-slate-800 dark:text-white">Roadmap</h2>
             <div className="grid gap-4">
               {data.roadmap.length === 0 && <p className="text-slate-500 italic">Your plan will appear here...</p>}
-              {data.roadmap.map((day, i) => (
-                <div key={i} className="flex gap-4 p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/5 hover:bg-white dark:hover:bg-white/10 transition-colors shadow-sm dark:shadow-none">
-                  <div className="h-8 w-8 bg-blue-100 dark:bg-blue-600/20 text-blue-700 dark:text-blue-400 rounded-full flex items-center justify-center text-xs font-bold shrink-0">D{day.day}</div>
-                  <div><h4 className="font-bold text-slate-900 dark:text-white text-sm">{day.topic}</h4><p className="text-xs text-slate-600 dark:text-slate-400">{day.task}</p></div>
+              {/* CRASH-PROOF ROADMAP RENDERING */}
+              {data?.roadmap && data.roadmap.length > 0 ? (
+                data.roadmap.map((dayPlan, index) => (
+                  <div key={index} className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200 dark:border-white/5 shadow-lg mb-6 transition-all hover:scale-[1.01]">
+                    
+                    {/* Header: Day & Topic */}
+                    <div className="flex items-center justify-between mb-4 border-b border-slate-200 dark:border-white/5 pb-4">
+                      <h3 className="text-2xl font-black text-slate-800 dark:text-white">Day {dayPlan?.day || index + 1}</h3>
+                      <span className="px-3 py-1 bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold rounded-full text-sm">
+                        {dayPlan?.topic || "Study Focus"}
+                      </span>
+                    </div>
+                    
+                    {/* Task List */}
+                    <ul className="space-y-3 mb-6">
+                      {dayPlan?.tasks && dayPlan.tasks.map((task, idx) => (
+                        <li key={idx} className="flex items-start gap-3 text-slate-600 dark:text-slate-300 font-medium">
+                          <span className="text-green-500 mt-0.5 text-lg">✓</span> {task}
+                        </li>
+                      ))}
+                    </ul>
+
+                    {/* THE YOUTUBE TIMESTAMP SECTION */}
+                    {/* THE UPGRADED YOUTUBE THUMBNAIL SECTION */}
+                  {dayPlan.youtube_query && (
+                    <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-500/20 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between shadow-sm transition-all hover:border-red-400 dark:hover:border-red-500/50">
+                      
+                      {/* Video Thumbnail & Title Link */}
+                      <div className="flex items-center gap-4 flex-1">
+                        {dayPlan.video ? (
+                          <a 
+                            href={`https://www.youtube.com/watch?v=${dayPlan.video.videoId}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="relative shrink-0 group block overflow-hidden rounded-lg shadow-md"
+                          >
+                            {/* Fetch the high-quality YouTube thumbnail */}
+                            <img 
+                              src={`https://img.youtube.com/vi/${dayPlan.video.videoId}/hqdefault.jpg`} 
+                              alt="Video Thumbnail" 
+                              className="w-32 md:w-40 aspect-video object-cover group-hover:scale-105 transition-transform duration-300" 
+                            />
+                            <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors flex items-center justify-center">
+                              <div className="bg-red-600 text-white rounded-full p-2 w-8 h-8 flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
+                                ▶
+                              </div>
+                            </div>
+                          </a>
+                        ) : (
+                          <div className="w-32 md:w-40 aspect-video bg-red-100 dark:bg-red-500/20 rounded-lg flex items-center justify-center shrink-0">
+                            ▶️
+                          </div>
+                        )}
+                        
+                        <div>
+                          <p className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-widest mb-1">Targeted Lesson</p>
+                          <a 
+                            href={dayPlan.video ? `https://www.youtube.com/watch?v=${dayPlan.video.videoId}` : `https://www.youtube.com/results?search_query=${dayPlan.youtube_query}`}
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-slate-800 dark:text-white font-bold text-sm md:text-base hover:text-red-600 dark:hover:text-red-400 transition-colors line-clamp-2"
+                          >
+                            {dayPlan.video ? dayPlan.video.title : `Search: "${dayPlan.youtube_query}"`}
+                          </a>
+                        </div>
+                      </div>
+                      
+                      {/* Critical Timestamp Box */}
+                      {dayPlan.timestamp && (
+                        <div className="bg-white dark:bg-slate-900 border border-red-200 dark:border-red-500/30 px-5 py-3 rounded-lg text-center shrink-0 shadow-md">
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mb-1">Critical Window</p>
+                          <p className="text-red-600 dark:text-red-400 font-black font-mono text-lg md:text-xl animate-pulse">
+                            ⏱ {dayPlan.timestamp}
+                          </p>
+                        </div>
+                      )}
+                      
+                    </div>
+                  )}
+
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-slate-500 p-8">
+                  {/* Shows this if no roadmap exists yet to prevent crashes */}
+                  Roadmap will appear here once generated...
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
@@ -201,6 +359,64 @@ function App() {
           </div>
         </section>
       )}
+
+
+
+
+
+
+
+
+
+
+
+      {/* DEVELOPER CONTACT FOOTER */}
+      <footer className="max-w-6xl mx-auto mt-12 mb-8 bg-white/60 dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-3xl p-8 backdrop-blur-xl shadow-xl dark:shadow-none text-center transition-colors duration-500">
+        <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-6">
+          Connect with the Developer
+        </h3>
+        <div className="flex flex-wrap justify-center gap-4 md:gap-8">
+          
+          {/* Email */}
+          <a href="mailto:your.email@example.com" className="px-6 py-3 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl font-medium hover:scale-105 transition-transform shadow-sm border border-slate-200 dark:border-white/5 flex items-center gap-2">
+            ✉️ Email
+          </a>
+
+          
+
+          {/* LinkedIn */}
+          <a href="https://linkedin.com/in/yourprofile" target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-xl font-medium hover:scale-105 transition-transform shadow-sm border border-blue-200 dark:border-blue-500/20 flex items-center gap-2">
+            💼 LinkedIn
+          </a>
+
+          
+
+          {/* Instagram */}
+          <a href="https://instagram.com/yourhandle" target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 rounded-xl font-medium hover:scale-105 transition-transform shadow-sm border border-pink-200 dark:border-pink-500/20 flex items-center gap-2">
+            📸 Instagram
+          </a>
+
+        </div>
+      </footer>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     </div>
   );
 }
