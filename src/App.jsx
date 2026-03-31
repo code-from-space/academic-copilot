@@ -397,7 +397,7 @@ function App() {
         <div className="flex flex-wrap justify-center gap-4">
           
           {/* Email */}
-          <a href="mailto:your.email@example.com" className={`group px-6 py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none ${
+          <a href="mailto:antarikshshrivas2006@gmail.com" className={`group px-6 py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none ${
             theme === 'luxury'
               ? 'bg-[#14151A] border border-[#4A3B32] text-[#A58B74] hover:border-[#8C725D] hover:bg-[#1C1E26] hover:text-[#C8B3A2]'
               : 'bg-transparent border border-slate-300 dark:border-slate-700 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400'
@@ -407,7 +407,7 @@ function App() {
           </a>
 
           {/* Phone */}
-          <a href="tel:+910000000000" className={`group px-6 py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none ${
+          <a href="tel:+918875788751" className={`group px-6 py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none ${
             theme === 'luxury'
               ? 'bg-[#14151A] border border-[#4A3B32] text-[#A58B74] hover:border-[#8C725D] hover:bg-[#1C1E26] hover:text-[#C8B3A2]'
               : 'bg-transparent border border-slate-300 dark:border-slate-700 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 text-slate-600 dark:text-slate-300 hover:text-green-600 dark:hover:text-green-400'
@@ -427,7 +427,7 @@ function App() {
           </a>
 
           {/* Instagram */}
-          <a href="https://instagram.com/yourhandle" target="_blank" rel="noopener noreferrer" className={`group px-6 py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none ${
+          <a href="https://instagram.com/antariksh._911" target="_blank" rel="noopener noreferrer" className={`group px-6 py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none ${
             theme === 'luxury'
               ? 'bg-[#14151A] border border-[#4A3B32] text-[#A58B74] hover:border-[#8C725D] hover:bg-[#1C1E26] hover:text-[#C8B3A2]'
               : 'bg-transparent border border-slate-300 dark:border-slate-700 hover:border-pink-500 hover:bg-pink-50 dark:hover:bg-pink-500/10 text-slate-600 dark:text-slate-300 hover:text-pink-600 dark:hover:text-pink-400'
@@ -437,7 +437,7 @@ function App() {
           </a>
 
           {/* X / Twitter */}
-          <a href="https://x.com/yourhandle" target="_blank" rel="noopener noreferrer" className={`group px-6 py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none ${
+          <a href="https://x.com/elonmusk" target="_blank" rel="noopener noreferrer" className={`group px-6 py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none ${
             theme === 'luxury'
               ? 'bg-[#14151A] border border-[#4A3B32] text-[#A58B74] hover:border-[#8C725D] hover:bg-[#1C1E26] hover:text-[#C8B3A2]'
               : 'bg-transparent border border-slate-300 dark:border-slate-700 hover:border-slate-800 hover:bg-slate-100 dark:hover:border-slate-400 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
