@@ -33,7 +33,7 @@ function App() {
       setTotalTasks(count);
       setCompletedTasks(new Set()); // Reset progress for new roadmap
     }
-  }, [data.roadmap]);
+  }, [data.roadmap, studyDays]);
 
   // 2. Make the clock tick every second
   useEffect(() => {
@@ -118,8 +118,8 @@ function App() {
       let filePart = null;
       if (file) {
         filePart = await fileToGenerativePart(file);
-        const fileRef = ref(storage, `documents/${file.name}`);
-        await uploadBytes(fileRef, file);
+        // const fileRef = ref(storage, `documents/${file.name}`);
+        // await uploadBytes(fileRef, file);
       }
 
       const prompt = `
@@ -145,7 +145,7 @@ function App() {
         Do not include markdown blocks like \`\`\`json. Just raw JSON.
       `;
       
-      const responseText = await getGeminiResponse(prompt, null);
+      const responseText = await getGeminiResponse(prompt, filePart);
       const cleanJson = responseText.replace(/```json|```/g, "").trim();
       const aiData = JSON.parse(cleanJson);
 
@@ -338,15 +338,7 @@ function App() {
                           </div>
                         </div>
                         
-                        {/* OVERFLOW HIDDEN: This stops the AI from breaking your card if it generates a huge string */}
-                        {dayPlan.timestamp && (
-                          <div className="bg-white dark:bg-slate-900 border border-red-200 dark:border-red-500/30 px-5 py-3 rounded-lg text-center shrink shadow-md max-w-full overflow-hidden">
-                            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mb-1">Critical Window</p>
-                            <p className="text-red-600 dark:text-red-400 font-black font-mono text-lg md:text-xl animate-pulse truncate" title={dayPlan.timestamp}>
-                              ⏱ {dayPlan.timestamp}
-                            </p>
-                          </div>
-                        )}
+                        
                         
                       </div>
                     )}
@@ -408,30 +400,42 @@ function App() {
       )}
 
       {/* DEVELOPER CONTACT FOOTER */}
-      <footer className="max-w-6xl mx-auto mt-12 mb-8 bg-white/60 dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-3xl p-8 backdrop-blur-xl shadow-xl dark:shadow-none text-center transition-colors duration-500">
-        <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-6">
+      {/* DEVELOPER CONTACT FOOTER */}
+      <footer className="max-w-6xl mx-auto mt-12 mb-8 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-3xl p-8 shadow-xl transition-colors duration-500 flex flex-col items-center">
+        <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-6">
           Connect with the Developer
         </h3>
-        <div className="flex flex-wrap justify-center gap-4 md:gap-6">
+        <div className="flex flex-wrap justify-center gap-4">
           
-          <a href="mailto:your.email@example.com" className="px-6 py-3 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-xl font-medium hover:scale-105 transition-transform shadow-sm border border-slate-200 dark:border-white/5 flex items-center gap-2">
-            ✉️ Email
+          {/* Email */}
+          <a href="mailto:your.email@example.com" className="group px-6 py-3 bg-transparent border border-slate-300 dark:border-slate-700 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:scale-110"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><path d="m2 4 10 8 10-8"></path></svg>
+            Email
           </a>
 
-          <a href="tel:+910000000000" className="px-6 py-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-xl font-medium hover:scale-105 transition-transform shadow-sm border border-green-200 dark:border-green-500/20 flex items-center gap-2">
-            📞 Phone
+          {/* Phone */}
+          <a href="tel:+910000000000" className="group px-6 py-3 bg-transparent border border-slate-300 dark:border-slate-700 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 text-slate-600 dark:text-slate-300 hover:text-green-600 dark:hover:text-green-400 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:scale-110"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+            Phone
           </a>
 
-          <a href="https://linkedin.com/in/yourprofile" target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-xl font-medium hover:scale-105 transition-transform shadow-sm border border-blue-200 dark:border-blue-500/20 flex items-center gap-2">
-            💼 LinkedIn
+          {/* LinkedIn */}
+          <a href="https://linkedin.com/in/yourprofile" target="_blank" rel="noopener noreferrer" className="group px-6 py-3 bg-transparent border border-slate-300 dark:border-slate-700 hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-600/10 text-slate-600 dark:text-slate-300 hover:text-blue-700 dark:hover:text-blue-500 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:scale-110"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle></svg>
+            LinkedIn
           </a>
 
-          <a href="https://instagram.com/yourhandle" target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 rounded-xl font-medium hover:scale-105 transition-transform shadow-sm border border-pink-200 dark:border-pink-500/20 flex items-center gap-2">
-            📸 Instagram
+          {/* Instagram */}
+          <a href="https://instagram.com/yourhandle" target="_blank" rel="noopener noreferrer" className="group px-6 py-3 bg-transparent border border-slate-300 dark:border-slate-700 hover:border-pink-500 hover:bg-pink-50 dark:hover:bg-pink-500/10 text-slate-600 dark:text-slate-300 hover:text-pink-600 dark:hover:text-pink-400 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:scale-110"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+            Instagram
           </a>
 
-          <a href="https://x.com/yourhandle" target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl font-medium hover:scale-105 transition-transform shadow-sm border border-slate-300 dark:border-slate-700 flex items-center gap-2">
-            𝕏 Twitter
+          {/* X / Twitter */}
+          <a href="https://x.com/yourhandle" target="_blank" rel="noopener noreferrer" className="group px-6 py-3 bg-transparent border border-slate-300 dark:border-slate-700 hover:border-slate-800 hover:bg-slate-100 dark:hover:border-slate-400 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none">
+            {/* Custom X Logo SVG */}
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="transition-transform group-hover:scale-110"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"></path></svg>
+            Twitter
           </a>
 
         </div>
