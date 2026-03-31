@@ -1,6 +1,6 @@
+// import { storage } from './firebaseConfig';
+// import { ref, uploadBytes } from "firebase/storage";
 import React, { useState, useEffect } from 'react';
-import { storage } from './firebaseConfig';
-import { ref, uploadBytes } from "firebase/storage";
 import { getGeminiResponse } from './gemini';
 import ChatLounge from './components/ChatLounge';
 import QuizArena from './components/QuizArena';
@@ -14,28 +14,32 @@ function App() {
   const [data, setData] = useState({ roadmap: [], library: [], youtube: [] });
   const [fullSyllabusText, setFullSyllabusText] = useState("");
   
-  // THEME STATE (Default to Dark)
-  const [isDarkMode, setIsDarkMode] = useState(true);
-
-
+  // --- 3-WAY THEME STATE (Restored & Upgraded) ---
+  const [theme, setTheme] = useState('dark'); // 'light', 'dark', or 'luxury'
+  const isDarkMode = theme === 'dark' || theme === 'luxury'; 
+  
+  const cycleTheme = () => {
+    if (theme === 'light') setTheme('dark');
+    else if (theme === 'dark') setTheme('luxury');
+    else setTheme('light');
+  };
 
   // --- REAL-TIME EXAM & HEATMAP LOGIC ---
   const [examTimer, setExamTimer] = useState(null);
   const [completedTasks, setCompletedTasks] = useState(new Set());
   const [totalTasks, setTotalTasks] = useState(0);
 
-  // 1. Start timer and count total tasks whenever a NEW roadmap is generated
   useEffect(() => {
     if (data?.roadmap && data.roadmap.length > 0) {
+      // eslint-disable-next-line
       setExamTimer({ days: Math.max(0, Number(studyDays) - 1), hours: 23, minutes: 59, seconds: 59 });
       let count = 0;
       data.roadmap.forEach(day => { count += (day.tasks ? day.tasks.length : 0); });
       setTotalTasks(count);
-      setCompletedTasks(new Set()); // Reset progress for new roadmap
+      setCompletedTasks(new Set()); 
     }
   }, [data.roadmap, studyDays]);
 
-  // 2. Make the clock tick every second
   useEffect(() => {
     if (!examTimer) return;
     const timer = setInterval(() => {
@@ -58,7 +62,6 @@ function App() {
     return () => clearInterval(timer);
   }, [examTimer !== null]);
 
-  // 3. Click handler for crossing off tasks
   const toggleTask = (taskId) => {
     setCompletedTasks(prev => {
       const newSet = new Set(prev);
@@ -67,9 +70,7 @@ function App() {
       return newSet;
     });
   };
-  // ---------------------------------------
 
-  // Apply the dark class to the HTML tag whenever the toggle changes
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -118,8 +119,6 @@ function App() {
       let filePart = null;
       if (file) {
         filePart = await fileToGenerativePart(file);
-        // const fileRef = ref(storage, `documents/${file.name}`);
-        // await uploadBytes(fileRef, file);
       }
 
       const prompt = `
@@ -151,24 +150,20 @@ function App() {
 
       setFullSyllabusText(JSON.stringify(aiData));
 
-      // NEW LOGIC: Fetch a specific video for every single day in the roadmap!
       const roadmapWithRealVideos = await Promise.all(
         (aiData.roadmap || []).map(async (dayPlan) => {
           if (dayPlan.youtube_query) {
-            // Use your existing function to search YouTube
             const videos = await fetchRealYouTubeVideos(dayPlan.youtube_query);
-            // Grab the #1 top result and attach it directly to this day's data
             dayPlan.video = videos.length > 0 ? videos[0] : null; 
           }
           return dayPlan;
         })
       );
 
-      // Save everything properly to state
       setData({
         roadmap: roadmapWithRealVideos,
         library: aiData.library || [],
-        youtube: [] // We don't need the global sidebar videos anymore since they are in the roadmap!
+        youtube: [] 
       });
       setLoading(false);
 
@@ -180,51 +175,83 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen transition-colors duration-500 bg-[#f0f4f8] dark:bg-black text-slate-800 dark:text-slate-200 p-6 md:p-12 relative">
+    <div className={`min-h-screen transition-colors duration-700 p-6 md:p-12 relative font-sans ${
+      theme === 'luxury' 
+        ? 'bg-[#121317] text-[#D6C7B9]' 
+        : theme === 'dark'
+          ? 'bg-black text-slate-200'
+          : 'bg-[#f0f4f8] text-slate-800'
+    }`}>
       
-      {/* THEME TOGGLE BUTTON */}
-      <button 
-        onClick={() => setIsDarkMode(!isDarkMode)}
-        className="absolute top-6 right-6 z-50 p-4 rounded-full bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 shadow-xl hover:scale-110 transition-all duration-300 flex items-center justify-center"
+      {/* THE 3-WAY THEME TOGGLE (Clean SVGs) */}
+      {/* THE 3-WAY THEME TOGGLE (Emoji Style) */}
+      <button
+        onClick={cycleTheme}
+        className={`absolute top-6 right-6 z-50 w-14 h-14 rounded-full transition-all duration-300 shadow-xl flex items-center justify-center border hover:scale-110 ${
+          theme === 'luxury' 
+            ? 'bg-[#1A1C23] border-[#3A312A]' 
+            : theme === 'dark'
+              ? 'bg-[#111318] border-white/5'
+              : 'bg-white border-slate-200'
+        }`}
+        title={`Current Mode: ${theme.toUpperCase()}`}
       >
-        <span className="text-2xl">{isDarkMode ? '☀️' : '🌙'}</span>
+        <span className="text-2xl drop-shadow-md transition-transform duration-300">
+          {theme === 'light' && '🌙'}
+          {theme === 'dark' && '☀️'}
+          {theme === 'luxury' && '✨'}
+        </span>
       </button>
 
-      <header className="max-w-6xl mx-auto mb-16 text-center pt-8">
-        <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-500">
+      <header className="max-w-6xl mx-auto mb-16 text-center pt-8 transition-colors duration-500">
+        <h1 className={`text-5xl md:text-6xl font-black text-transparent bg-clip-text transition-all duration-700 ${
+          theme === 'luxury' 
+            ? 'bg-gradient-to-r from-[#8C725D] via-[#C8B3A2] to-[#8C725D] tracking-tight' 
+            : 'bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-500'
+        }`}>
           STUDYFORGE
         </h1>
-        <p className="text-slate-500 mt-2 uppercase tracking-widest text-xs font-bold">
-          Academic Accelerator
+        <p className={`mt-2 uppercase tracking-widest text-xs font-bold transition-colors duration-500 ${
+          theme === 'luxury' ? 'text-[#A58B74]' : 'text-slate-500'
+        }`}>
+          Your Academic Triage Partner
         </p>
       </header>
 
-      {/* EXAM TRIAGE DASHBOARD - DYNAMIC VERSION */}
+      {/* EXAM TRIAGE DASHBOARD */}
       <div className="max-w-6xl mx-auto mb-12 grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* T-MINUS COUNTDOWN CLOCK */}
-        <div className="col-span-1 md:col-span-1 bg-red-500/10 border border-red-500/30 rounded-3xl p-6 backdrop-blur-xl shadow-lg dark:bg-red-900/20 flex flex-col items-center justify-center transition-all">
-          <h3 className="text-red-600 dark:text-red-400 font-black tracking-widest uppercase text-sm mb-2">
+        {/* T-MINUS CLOCK */}
+        <div className={`col-span-1 md:col-span-1 rounded-3xl p-6 backdrop-blur-xl shadow-lg flex flex-col items-center justify-center transition-all ${
+          theme === 'luxury'
+            ? 'bg-[#1A1C23] border border-[#3A312A]'
+            : 'bg-red-500/10 border border-red-500/30 dark:bg-red-900/20'
+        }`}>
+          <h3 className={`font-black tracking-widest uppercase text-sm mb-2 ${theme === 'luxury' ? 'text-[#8C725D]' : 'text-red-600 dark:text-red-400'}`}>
             Exam T-Minus
           </h3>
-          <div className="text-4xl md:text-5xl font-black text-red-600 dark:text-red-400 font-mono tracking-tighter">
+          <div className={`text-4xl md:text-5xl font-black font-mono tracking-tighter ${theme === 'luxury' ? 'text-[#C8B3A2]' : 'text-red-600 dark:text-red-400'}`}>
             {examTimer 
               ? `${examTimer.days}d ${String(examTimer.hours).padStart(2, '0')}:${String(examTimer.minutes).padStart(2, '0')}:${String(examTimer.seconds).padStart(2, '0')}`
               : "--:--:--"}
           </div>
-          <p className="text-red-500/80 dark:text-red-400/80 text-xs mt-2 font-bold uppercase">
+          <p className={`text-xs mt-2 font-bold uppercase ${theme === 'luxury' ? 'text-[#8C725D]/70' : 'text-red-500/80 dark:text-red-400/80'}`}>
             {examTimer ? "Survival Mode Engaged" : "AWAITING SYLLABUS"}
           </p>
         </div>
 
-        {/* PROGRESS HEATMAP */}
-        <div className="col-span-1 md:col-span-2 bg-white/60 dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-3xl p-6 backdrop-blur-xl shadow-xl transition-all">
+        {/* HEATMAP */}
+        <div className={`col-span-1 md:col-span-2 rounded-3xl p-6 backdrop-blur-xl shadow-xl transition-all ${
+          theme === 'luxury'
+            ? 'bg-[#1A1C23] border border-[#3A312A]'
+            : 'bg-white/60 dark:bg-slate-900/40 border border-slate-200 dark:border-white/5'
+        }`}>
           <div className="flex justify-between items-end mb-4">
             <div>
-              <h3 className="text-slate-800 dark:text-white font-black text-lg">Burn Rate Heatmap</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm">Click roadmap tasks to log progress</p>
+              <h3 className={`font-black text-lg ${theme === 'luxury' ? 'text-[#D6C7B9]' : 'text-slate-800 dark:text-white'}`}>Burn Rate Heatmap</h3>
+              <p className={`text-sm ${theme === 'luxury' ? 'text-[#6E7381]' : 'text-slate-500 dark:text-slate-400'}`}>Daily Tasks Mastery</p>
             </div>
-            <div className="text-green-500 font-black text-2xl transition-all">
+            <div className={`font-black text-2xl transition-all ${theme === 'luxury' ? 'text-[#A58B74]' : 'text-green-500'}`}>
               {totalTasks > 0 ? Math.round((completedTasks.size / totalTasks) * 100) : 0}%
             </div>
           </div>
@@ -236,204 +263,185 @@ function App() {
               const isCompleted = i < activeSquares; 
               const isCurrent = i === activeSquares && totalTasks > 0 && percentage < 1;
               
-              return (
-                <div 
-                  key={i} 
-                  className={`h-6 rounded-md transition-all duration-500 ${
-                    isCompleted 
-                      ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]' 
-                      : isCurrent 
-                        ? 'bg-orange-400 animate-pulse shadow-[0_0_10px_rgba(249,115,22,0.4)]' 
-                        : 'bg-slate-200 dark:bg-slate-800'
-                  }`}
-                ></div>
-              )
+              let squareClass = 'bg-slate-200 dark:bg-slate-800';
+              if (theme === 'luxury') {
+                squareClass = isCompleted ? 'bg-[#8C725D]' : isCurrent ? 'bg-[#A58B74] animate-pulse' : 'bg-[#23252E]';
+              } else {
+                squareClass = isCompleted ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]' : isCurrent ? 'bg-orange-400 animate-pulse' : 'bg-slate-200 dark:bg-slate-800';
+              }
+
+              return <div key={i} className={`h-6 rounded-md transition-all duration-500 ${squareClass}`}></div>;
             })}
           </div>
         </div>
       </div>
 
       <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
         {/* LEFT COLUMN: INPUTS */}
-        <section className="space-y-6 bg-white/60 dark:bg-slate-900/40 p-8 rounded-3xl border border-slate-200 dark:border-white/5 backdrop-blur-xl h-fit shadow-xl dark:shadow-none transition-colors duration-500">
-          <label className="block text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">1. Syllabus Upload</label>
+        <section className={`space-y-6 p-8 rounded-3xl backdrop-blur-xl h-fit shadow-xl dark:shadow-none transition-colors duration-500 ${
+          theme === 'luxury' ? 'bg-[#1A1C23] border border-[#3A312A]' : 'bg-white/60 dark:bg-slate-900/40 border border-slate-200 dark:border-white/5'
+        }`}>
+          <label className={`block text-xs font-bold uppercase tracking-widest ${theme === 'luxury' ? 'text-[#A58B74]' : 'text-blue-600 dark:text-blue-400'}`}>1. Start Here: Syllabus</label>
           <div className="w-full">
-            <label htmlFor="file-upload" className="w-full flex flex-col items-center justify-center bg-blue-50 hover:bg-blue-100 dark:bg-blue-600/10 dark:hover:bg-blue-600/20 border-2 border-dashed border-blue-300 dark:border-blue-600/30 rounded-2xl py-6 cursor-pointer transition-all">
-              <span className="text-blue-700 dark:text-blue-500 font-bold text-sm">
-                {file ? `✓ ${file.name}` : "Click to select file"}
+            <label htmlFor="file-upload" className={`w-full flex flex-col items-center justify-center border-2 border-dashed rounded-2xl py-6 cursor-pointer transition-all ${
+              theme === 'luxury' 
+                ? 'bg-[#14151A] hover:bg-[#1C1E26] border-[#524439] text-[#A58B74]' 
+                : 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-600/10 dark:hover:bg-blue-600/20 border-blue-300 dark:border-blue-600/30 text-blue-700 dark:text-blue-500'
+            }`}>
+              <span className="font-bold text-sm flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                {file ? file.name : "Click to select file"}
               </span>
             </label>
             <input id="file-upload" type="file" className="hidden" onChange={(e) => setFile(e.target.files[0])} />
           </div>
           
-          <label className="block text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">2. Priority Topics</label>
-          <textarea className="w-full h-32 bg-white/80 dark:bg-black/50 border border-slate-300 dark:border-white/10 rounded-2xl p-4 text-sm outline-none focus:ring-1 focus:ring-blue-500 transition-colors" value={extraTopics} onChange={(e) => setExtraTopics(e.target.value)} />
+          <label className={`block text-xs font-bold uppercase tracking-widest ${theme === 'luxury' ? 'text-[#A58B74]' : 'text-blue-600 dark:text-blue-400'}`}>2. Priority Topics</label>
+          <textarea className={`w-full h-32 rounded-2xl p-4 text-sm outline-none transition-colors ${
+            theme === 'luxury' ? 'bg-[#14151A] border border-[#3A312A] focus:border-[#A58B74]' : 'bg-white/80 dark:bg-black/50 border border-slate-300 dark:border-white/10 focus:ring-1 focus:ring-blue-500'
+          }`} value={extraTopics} onChange={(e) => setExtraTopics(e.target.value)} />
           
-          <label className="block text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">3. Days</label>
-          <input type="number" value={studyDays} onChange={(e) => setStudyDays(e.target.value)} className="w-full bg-white/80 dark:bg-black/50 border border-slate-300 dark:border-white/10 rounded-xl p-3 outline-none transition-colors" />
+          <label className={`block text-xs font-bold uppercase tracking-widest ${theme === 'luxury' ? 'text-[#A58B74]' : 'text-blue-600 dark:text-blue-400'}`}>3. Days</label>
+          <input type="number" value={studyDays} onChange={(e) => setStudyDays(e.target.value)} className={`w-full rounded-xl p-3 outline-none transition-colors ${
+            theme === 'luxury' ? 'bg-[#14151A] border border-[#3A312A] focus:border-[#A58B74]' : 'bg-white/80 dark:bg-black/50 border border-slate-300 dark:border-white/10'
+          }`} />
 
-          <button onClick={handleAnalyze} disabled={loading} className="w-full bg-blue-600 py-4 rounded-2xl text-white font-bold hover:bg-blue-700 dark:hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/30">
-            {loading ? "PROCESSING..." : "GENERATE ROADMAP 🚀"}
+          <button onClick={handleAnalyze} disabled={loading} className={`w-full py-4 rounded-2xl font-bold transition-all ${
+            theme === 'luxury' 
+              ? 'bg-[#A58B74] text-[#121317] hover:bg-[#B89C82] shadow-[0_0_15px_rgba(165,139,116,0.2)]' 
+              : 'bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-500 shadow-lg shadow-blue-500/30'
+          }`}>
+            {loading ? "PROCESSING..." : "GENERATE ROADMAP"}
           </button>
         </section>
 
-        {/* RIGHT COLUMN: ROADMAP & LIBRARY */}
+        {/* RIGHT COLUMN: ROADMAP */}
         <section className="lg:col-span-2 space-y-6">
-          <div className="bg-white/60 dark:bg-slate-900/40 p-8 rounded-3xl border border-slate-200 dark:border-white/5 backdrop-blur-xl shadow-xl dark:shadow-none transition-colors duration-500">
-            <h2 className="text-2xl font-bold mb-6 border-l-4 border-blue-500 pl-4 text-slate-800 dark:text-white">Roadmap</h2>
+          <div className={`p-8 rounded-3xl backdrop-blur-xl shadow-xl dark:shadow-none transition-colors duration-500 ${
+            theme === 'luxury' ? 'bg-[#1A1C23] border border-[#3A312A]' : 'bg-white/60 dark:bg-slate-900/40 border border-slate-200 dark:border-white/5'
+          }`}>
+            <h2 className={`text-xl font-bold mb-6 border-l-4 pl-4 uppercase tracking-widest ${theme === 'luxury' ? 'border-[#8C725D] text-[#D6C7B9]' : 'border-blue-500 text-slate-800 dark:text-white'}`}>Roadmap</h2>
+            
             <div className="grid gap-4">
-              {data.roadmap.length === 0 && <p className="text-slate-500 italic">Your plan will appear here...</p>}
+              {data.roadmap.length === 0 && <p className={`italic ${theme === 'luxury' ? 'text-[#6E7381]' : 'text-slate-500'}`}>Your plan will appear here...</p>}
               
               {data?.roadmap && data.roadmap.length > 0 && data.roadmap.map((dayPlan, index) => (
-                  <div key={index} className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200 dark:border-white/5 shadow-lg mb-6 transition-all hover:scale-[1.01]">
+                  <div key={index} className={`rounded-2xl p-6 shadow-lg mb-6 transition-all ${
+                    theme === 'luxury' ? 'bg-[#14151A] border border-[#3A312A]' : 'bg-white/60 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5'
+                  }`}>
                     
-                    <div className="flex items-center justify-between mb-4 border-b border-slate-200 dark:border-white/5 pb-4">
-                      <h3 className="text-2xl font-black text-slate-800 dark:text-white">Day {dayPlan?.day || index + 1}</h3>
-                      <span className="px-3 py-1 bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold rounded-full text-sm">
-                        {dayPlan?.topic || "Study Focus"}
-                      </span>
+                    <div className={`flex items-center justify-between mb-4 border-b pb-4 ${theme === 'luxury' ? 'border-[#3A312A]' : 'border-slate-200 dark:border-white/5'}`}>
+                      <h3 className={`text-xl font-bold ${theme === 'luxury' ? 'text-[#C8B3A2]' : 'text-slate-800 dark:text-white'}`}>DAY {dayPlan?.day || index + 1}</h3>
                     </div>
                     
-                    {/* INTERACTIVE Task List */}
                     <ul className="space-y-3 mb-6">
                       {dayPlan?.tasks && dayPlan.tasks.map((task, idx) => {
                         const taskId = `day${index}-task${idx}`;
                         const isDone = completedTasks.has(taskId);
+                        
+                        let textClass = 'text-slate-600 dark:text-slate-300';
+                        if (theme === 'luxury') textClass = isDone ? 'opacity-40 line-through text-[#6E7381]' : 'text-[#D6C7B9]';
+                        else textClass = isDone ? 'opacity-40 line-through text-slate-500' : 'text-slate-600 dark:text-slate-300';
+
                         return (
-                          <li 
-                            key={idx} 
-                            onClick={() => toggleTask(taskId)}
-                            className={`flex items-start gap-3 font-medium cursor-pointer transition-all duration-300 p-2 -ml-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 ${
-                              isDone ? 'opacity-40 line-through text-slate-500' : 'text-slate-600 dark:text-slate-300'
-                            }`}
-                          >
-                            <span className={`mt-0.5 text-lg transition-colors ${isDone ? 'text-slate-500' : 'text-green-500'}`}>✓</span> 
+                          <li key={idx} onClick={() => toggleTask(taskId)} className={`flex items-start gap-3 text-sm cursor-pointer transition-all duration-300 ${textClass}`}>
+                            <div className={`w-4 h-4 mt-0.5 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                              isDone 
+                                ? theme === 'luxury' ? 'bg-[#8C725D] border-[#8C725D]' : 'bg-green-500 border-green-500'
+                                : theme === 'luxury' ? 'border-[#524439]' : 'border-slate-400 dark:border-slate-500'
+                            }`}>
+                              {isDone && <svg className="w-3 h-3 text-[#121317] dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                            </div>
                             {task}
                           </li>
                         );
                       })}
                     </ul>
 
-                    {/* OVERFLOW-FIXED YOUTUBE THUMBNAIL SECTION */}
+                    {/* YOUTUBE LINK */}
                     {dayPlan.youtube_query && (
-                      <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-500/20 rounded-xl p-4 flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between shadow-sm transition-all hover:border-red-400 dark:hover:border-red-500/50">
-                        
-                        <div className="flex items-center gap-4 flex-1 min-w-0">
-                          {dayPlan.video ? (
-                            <a href={`https://www.youtube.com/watch?v=${dayPlan.video.videoId}`} target="_blank" rel="noopener noreferrer" className="relative shrink-0 group block overflow-hidden rounded-lg shadow-md">
-                              <img src={`https://img.youtube.com/vi/${dayPlan.video.videoId}/hqdefault.jpg`} alt="Video Thumbnail" className="w-32 md:w-40 aspect-video object-cover group-hover:scale-105 transition-transform duration-300" />
-                              <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors flex items-center justify-center">
-                                <div className="bg-red-600 text-white rounded-full p-2 w-8 h-8 flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">▶</div>
-                              </div>
-                            </a>
-                          ) : (
-                            <div className="w-32 md:w-40 aspect-video bg-red-100 dark:bg-red-500/20 rounded-lg flex items-center justify-center shrink-0">▶️</div>
-                          )}
-                          
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-widest mb-1">Targeted Lesson</p>
-                            <a href={dayPlan.video ? `https://www.youtube.com/watch?v=${dayPlan.video.videoId}` : `https://www.youtube.com/results?search_query=${dayPlan.youtube_query}`} target="_blank" rel="noopener noreferrer" className="text-slate-800 dark:text-white font-bold text-sm md:text-base hover:text-red-600 dark:hover:text-red-400 transition-colors line-clamp-2">
-                              {dayPlan.video ? dayPlan.video.title : `Search: "${dayPlan.youtube_query}"`}
-                            </a>
-                          </div>
-                        </div>
-                        
-                        
-                        
+                      <div className={`text-sm flex items-center gap-2 ${theme === 'luxury' ? 'text-[#A58B74]' : 'text-red-500'}`}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21.582 6.186a2.684 2.684 0 0 0-1.884-1.895C17.973 3.84 12 3.84 12 3.84s-5.973 0-7.698.451a2.684 2.684 0 0 0-1.884 1.895C2 7.925 2 12 2 12s0 4.075.418 5.814a2.684 2.684 0 0 0 1.884 1.895c1.725.451 7.698.451 7.698.451s5.973 0 7.698-.451a2.684 2.684 0 0 0 1.884-1.895C22 16.075 22 12 22 12s0-4.075-.418-5.814zM9.995 15.394V8.606l6.302 3.394-6.302 3.394z"></path></svg>
+                        <a href={dayPlan.video ? `https://www.youtube.com/watch?v=${dayPlan.video.videoId}` : `https://www.youtube.com/results?search_query=${dayPlan.youtube_query}`} target="_blank" rel="noopener noreferrer" className="hover:underline hover:opacity-80 transition-opacity">
+                          {dayPlan.video ? dayPlan.video.title : `Search: "${dayPlan.youtube_query}"`}
+                        </a>
                       </div>
                     )}
                   </div>
               ))}
             </div>
           </div>
-
-          {/* COLOR-CORRECTED LIBRARY ARCHIVE */}
-          <div className="bg-white/60 dark:bg-slate-900/40 p-8 rounded-3xl border border-slate-200 dark:border-white/5 backdrop-blur-xl shadow-xl dark:shadow-none transition-colors duration-500">
-            <h2 className="text-xl font-bold text-purple-600 dark:text-purple-400 mb-4 flex items-center">📚 Library Archive</h2>
-            <div className="flex flex-wrap gap-2">
-              {data.library.length === 0 && <p className="text-slate-500 italic text-xs">Recommended books will appear here...</p>}
-              {data.library.map((book, i) => (
-                <div key={i} className="px-4 py-2 bg-slate-50 dark:bg-[#0f111a] border border-slate-200 dark:border-white/10 rounded-full text-[11px] shadow-sm flex items-center gap-1">
-                  {book.title && book.title.toLowerCase().includes(' by ') ? (
-                    <>
-                      <span className="font-bold text-purple-600 dark:text-purple-400">{book.title.split(/ by /i)[0]}</span>
-                      <span className="text-slate-500 dark:text-slate-400 italic">by {book.title.split(/ by /i)[1].replace(/ -$/, '')}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="font-bold text-purple-600 dark:text-purple-400">{book.title.replace(/ -$/, '')}</span>
-                      {book.author && <span className="text-slate-500 dark:text-slate-400 italic">by {book.author.replace(/ -$/, '')}</span>}
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
         </section>
       </main>
 
+      
       {/* INTERACTIVE SECTION: CHAT, QUIZ, & VIVA */}
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 mt-10">
-        <ChatLounge extractedText={fullSyllabusText} />
-        <QuizArena extractedText={fullSyllabusText} />
-        <VivaVoce extractedText={fullSyllabusText} />
+        <ChatLounge extractedText={fullSyllabusText} theme={theme} />
+        <QuizArena extractedText={fullSyllabusText} theme={theme} />
+        <VivaVoce extractedText={fullSyllabusText} theme={theme} />
       </div>
 
-      {/* YOUTUBE SECTION */}
-      {data.youtube && data.youtube.length > 0 && (
-        <section className="max-w-6xl mx-auto mt-12 mb-20">
-          <h2 className="text-3xl font-black text-red-600 dark:text-red-500 mb-8 border-l-4 border-red-600 pl-4 uppercase tracking-tighter">Tutorial Lounge 📺</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {data.youtube.map((video, i) => (
-              <a key={i} href={`https://www.youtube.com/watch?v=${video.videoId}`} target="_blank" rel="noopener noreferrer" className="group bg-white/80 dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-3xl overflow-hidden hover:border-red-500 dark:hover:border-red-600/50 transition-all flex flex-col shadow-lg dark:shadow-none">
-                <div className="relative aspect-video overflow-hidden bg-slate-200 dark:bg-slate-800">
-                  <img src={`https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`} className="w-full h-full object-cover group-hover:scale-105 transition-all" onError={(e) => { e.target.src = `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`; }} />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/10 dark:bg-black/30 group-hover:bg-transparent transition-all">
-                    <div className="h-12 w-12 bg-red-600 text-white rounded-full flex items-center justify-center shadow-2xl scale-90 group-hover:scale-110 transition-transform">▶</div>
-                  </div>
-                </div>
-                <div className="p-5 flex-grow"><h4 className="font-bold text-slate-900 dark:text-white text-sm line-clamp-2">{video.title}</h4><p className="text-[10px] text-slate-500 italic mt-2 leading-relaxed">"{video.reason}"</p></div>
-              </a>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* DEVELOPER CONTACT FOOTER */}
-      {/* DEVELOPER CONTACT FOOTER */}
-      <footer className="max-w-6xl mx-auto mt-12 mb-8 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-3xl p-8 shadow-xl transition-colors duration-500 flex flex-col items-center">
-        <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-6">
+      {/* ADAPTIVE DEVELOPER CONTACT FOOTER */}
+      <footer className={`max-w-6xl mx-auto mt-12 mb-8 backdrop-blur-xl rounded-3xl p-8 shadow-xl transition-colors duration-500 flex flex-col items-center ${
+        theme === 'luxury' 
+          ? 'bg-[#1A1C23] border border-[#3A312A]' 
+          : 'bg-white/60 dark:bg-slate-900/60 border border-slate-200 dark:border-white/5'
+      }`}>
+        <h3 className={`text-xs font-bold uppercase tracking-widest mb-6 ${
+          theme === 'luxury' ? 'text-[#8C725D]' : 'text-slate-400 dark:text-slate-500'
+        }`}>
           Connect with the Developer
         </h3>
         <div className="flex flex-wrap justify-center gap-4">
           
           {/* Email */}
-          <a href="mailto:your.email@example.com" className="group px-6 py-3 bg-transparent border border-slate-300 dark:border-slate-700 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none">
+          <a href="mailto:your.email@example.com" className={`group px-6 py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none ${
+            theme === 'luxury'
+              ? 'bg-[#14151A] border border-[#4A3B32] text-[#A58B74] hover:border-[#8C725D] hover:bg-[#1C1E26] hover:text-[#C8B3A2]'
+              : 'bg-transparent border border-slate-300 dark:border-slate-700 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400'
+          }`}>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:scale-110"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><path d="m2 4 10 8 10-8"></path></svg>
             Email
           </a>
 
           {/* Phone */}
-          <a href="tel:+910000000000" className="group px-6 py-3 bg-transparent border border-slate-300 dark:border-slate-700 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 text-slate-600 dark:text-slate-300 hover:text-green-600 dark:hover:text-green-400 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none">
+          <a href="tel:+910000000000" className={`group px-6 py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none ${
+            theme === 'luxury'
+              ? 'bg-[#14151A] border border-[#4A3B32] text-[#A58B74] hover:border-[#8C725D] hover:bg-[#1C1E26] hover:text-[#C8B3A2]'
+              : 'bg-transparent border border-slate-300 dark:border-slate-700 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 text-slate-600 dark:text-slate-300 hover:text-green-600 dark:hover:text-green-400'
+          }`}>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:scale-110"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
             Phone
           </a>
 
           {/* LinkedIn */}
-          <a href="https://linkedin.com/in/yourprofile" target="_blank" rel="noopener noreferrer" className="group px-6 py-3 bg-transparent border border-slate-300 dark:border-slate-700 hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-600/10 text-slate-600 dark:text-slate-300 hover:text-blue-700 dark:hover:text-blue-500 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none">
+          <a href="https://www.linkedin.com/in/code-from-space" target="_blank" rel="noopener noreferrer" className={`group px-6 py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none ${
+            theme === 'luxury'
+              ? 'bg-[#14151A] border border-[#4A3B32] text-[#A58B74] hover:border-[#8C725D] hover:bg-[#1C1E26] hover:text-[#C8B3A2]'
+              : 'bg-transparent border border-slate-300 dark:border-slate-700 hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-600/10 text-slate-600 dark:text-slate-300 hover:text-blue-700 dark:hover:text-blue-500'
+          }`}>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:scale-110"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle></svg>
             LinkedIn
           </a>
 
           {/* Instagram */}
-          <a href="https://instagram.com/yourhandle" target="_blank" rel="noopener noreferrer" className="group px-6 py-3 bg-transparent border border-slate-300 dark:border-slate-700 hover:border-pink-500 hover:bg-pink-50 dark:hover:bg-pink-500/10 text-slate-600 dark:text-slate-300 hover:text-pink-600 dark:hover:text-pink-400 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none">
+          <a href="https://instagram.com/yourhandle" target="_blank" rel="noopener noreferrer" className={`group px-6 py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none ${
+            theme === 'luxury'
+              ? 'bg-[#14151A] border border-[#4A3B32] text-[#A58B74] hover:border-[#8C725D] hover:bg-[#1C1E26] hover:text-[#C8B3A2]'
+              : 'bg-transparent border border-slate-300 dark:border-slate-700 hover:border-pink-500 hover:bg-pink-50 dark:hover:bg-pink-500/10 text-slate-600 dark:text-slate-300 hover:text-pink-600 dark:hover:text-pink-400'
+          }`}>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:scale-110"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
             Instagram
           </a>
 
           {/* X / Twitter */}
-          <a href="https://x.com/yourhandle" target="_blank" rel="noopener noreferrer" className="group px-6 py-3 bg-transparent border border-slate-300 dark:border-slate-700 hover:border-slate-800 hover:bg-slate-100 dark:hover:border-slate-400 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none">
-            {/* Custom X Logo SVG */}
+          <a href="https://x.com/yourhandle" target="_blank" rel="noopener noreferrer" className={`group px-6 py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none ${
+            theme === 'luxury'
+              ? 'bg-[#14151A] border border-[#4A3B32] text-[#A58B74] hover:border-[#8C725D] hover:bg-[#1C1E26] hover:text-[#C8B3A2]'
+              : 'bg-transparent border border-slate-300 dark:border-slate-700 hover:border-slate-800 hover:bg-slate-100 dark:hover:border-slate-400 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+          }`}>
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="transition-transform group-hover:scale-110"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"></path></svg>
             Twitter
           </a>
