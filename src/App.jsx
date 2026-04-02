@@ -14,8 +14,8 @@ function App() {
   const [data, setData] = useState({ roadmap: [], library: [], youtube: [] });
   const [fullSyllabusText, setFullSyllabusText] = useState("");
   
-  // --- 3-WAY THEME STATE (Restored & Upgraded) ---
-  const [theme, setTheme] = useState('dark'); // 'light', 'dark', or 'luxury'
+  // --- 3-WAY THEME STATE ---
+  const [theme, setTheme] = useState('dark'); 
   const isDarkMode = theme === 'dark' || theme === 'luxury'; 
   
   const cycleTheme = () => {
@@ -31,7 +31,6 @@ function App() {
 
   useEffect(() => {
     if (data?.roadmap && data.roadmap.length > 0) {
-      // eslint-disable-next-line
       setExamTimer({ days: Math.max(0, Number(studyDays) - 1), hours: 23, minutes: 59, seconds: 59 });
       let count = 0;
       data.roadmap.forEach(day => { count += (day.tasks ? day.tasks.length : 0); });
@@ -95,7 +94,8 @@ function App() {
 
   const fetchRealYouTubeVideos = async (query) => {
     const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
-    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=3&q=${encodeURIComponent(query)}&type=video&key=${apiKey}`;
+    // CHANGED: maxResults=1 to strictly fetch only 1 video and save API quota
+    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&q=${encodeURIComponent(query)}&type=video&key=${apiKey}`;
     try {
       const response = await fetch(url);
       const result = await response.json();
@@ -103,7 +103,8 @@ function App() {
       return result.items.map(item => ({
         title: item.snippet.title,
         videoId: item.id.videoId,
-        reason: "Highly rated tutorial for your roadmap topic."
+        reason: "Highly rated tutorial for your roadmap topic.",
+        url: `https://www.youtube.com/watch?v=${item.id.videoId}`
       }));
     } catch (error) {
       console.error("YouTube API Error:", error);
@@ -154,7 +155,7 @@ function App() {
         (aiData.roadmap || []).map(async (dayPlan) => {
           if (dayPlan.youtube_query) {
             const videos = await fetchRealYouTubeVideos(dayPlan.youtube_query);
-            dayPlan.video = videos.length > 0 ? videos[0] : null; 
+            dayPlan.videos = videos; 
           }
           return dayPlan;
         })
@@ -183,8 +184,6 @@ function App() {
           : 'bg-[#f0f4f8] text-slate-800'
     }`}>
       
-      {/* THE 3-WAY THEME TOGGLE (Clean SVGs) */}
-      {/* THE 3-WAY THEME TOGGLE (Emoji Style) */}
       <button
         onClick={cycleTheme}
         className={`absolute top-6 right-6 z-50 w-14 h-14 rounded-full transition-all duration-300 shadow-xl flex items-center justify-center border hover:scale-110 ${
@@ -218,10 +217,8 @@ function App() {
         </p>
       </header>
 
-      {/* EXAM TRIAGE DASHBOARD */}
       <div className="max-w-6xl mx-auto mb-12 grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* T-MINUS CLOCK */}
         <div className={`col-span-1 md:col-span-1 rounded-3xl p-6 backdrop-blur-xl shadow-lg flex flex-col items-center justify-center transition-all ${
           theme === 'luxury'
             ? 'bg-[#1A1C23] border border-[#3A312A]'
@@ -240,7 +237,6 @@ function App() {
           </p>
         </div>
 
-        {/* HEATMAP */}
         <div className={`col-span-1 md:col-span-2 rounded-3xl p-6 backdrop-blur-xl shadow-xl transition-all ${
           theme === 'luxury'
             ? 'bg-[#1A1C23] border border-[#3A312A]'
@@ -278,7 +274,6 @@ function App() {
 
       <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* LEFT COLUMN: INPUTS */}
         <section className={`space-y-6 p-8 rounded-3xl backdrop-blur-xl h-fit shadow-xl dark:shadow-none transition-colors duration-500 ${
           theme === 'luxury' ? 'bg-[#1A1C23] border border-[#3A312A]' : 'bg-white/60 dark:bg-slate-900/40 border border-slate-200 dark:border-white/5'
         }`}>
@@ -316,7 +311,6 @@ function App() {
           </button>
         </section>
 
-        {/* RIGHT COLUMN: ROADMAP */}
         <section className="lg:col-span-2 space-y-6">
           <div className={`p-8 rounded-3xl backdrop-blur-xl shadow-xl dark:shadow-none transition-colors duration-500 ${
             theme === 'luxury' ? 'bg-[#1A1C23] border border-[#3A312A]' : 'bg-white/60 dark:bg-slate-900/40 border border-slate-200 dark:border-white/5'
@@ -359,15 +353,77 @@ function App() {
                       })}
                     </ul>
 
-                    {/* YOUTUBE LINK */}
-                    {dayPlan.youtube_query && (
-                      <div className={`text-sm flex items-center gap-2 ${theme === 'luxury' ? 'text-[#A58B74]' : 'text-red-500'}`}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21.582 6.186a2.684 2.684 0 0 0-1.884-1.895C17.973 3.84 12 3.84 12 3.84s-5.973 0-7.698.451a2.684 2.684 0 0 0-1.884 1.895C2 7.925 2 12 2 12s0 4.075.418 5.814a2.684 2.684 0 0 0 1.884 1.895c1.725.451 7.698.451 7.698.451s5.973 0 7.698-.451a2.684 2.684 0 0 0 1.884-1.895C22 16.075 22 12 22 12s0-4.075-.418-5.814zM9.995 15.394V8.606l6.302 3.394-6.302 3.394z"></path></svg>
-                        <a href={dayPlan.video ? `https://www.youtube.com/watch?v=${dayPlan.video.videoId}` : `https://www.youtube.com/results?search_query=${dayPlan.youtube_query}`} target="_blank" rel="noopener noreferrer" className="hover:underline hover:opacity-80 transition-opacity">
-                          {dayPlan.video ? dayPlan.video.title : `Search: "${dayPlan.youtube_query}"`}
-                        </a>
-                      </div>
-                    )}
+                    {/* ONLY SHOW 1 VIDEO, OR A FALLBACK LINK IF NONE FOUND */}
+                    {dayPlan.videos && dayPlan.videos.length > 0 ? (
+                      dayPlan.videos.slice(0, 1).map((video, vIndex) => {
+                        const videoId = video.url.includes('v=') 
+                          ? video.url.split('v=')[1].substring(0, 11) 
+                          : video.url.split('youtu.be/')[1]?.substring(0, 11);
+
+                        return (
+                          <a 
+                            key={vIndex} 
+                            href={video.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className={`mt-4 group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md ${
+                              theme === 'luxury'
+                                ? 'bg-[#1A1C23] border-[#3A312A] hover:border-[#8C725D] hover:bg-[#1C1E26]'
+                                : 'bg-white dark:bg-slate-800/40 border-slate-200 dark:border-white/5 hover:border-red-400 dark:hover:border-red-500/50'
+                            }`}
+                          >
+                            <div className="relative w-full sm:w-40 h-28 sm:h-24 shrink-0 rounded-xl overflow-hidden bg-black border border-white/10">
+                              <img 
+                                src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`} 
+                                alt="Video Thumbnail" 
+                                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-transparent transition-colors duration-300">
+                                <div className={`w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center transition-transform duration-300 group-hover:scale-110 shadow-lg ${
+                                  theme === 'luxury' ? 'bg-[#A58B74]/90 text-white' : 'bg-red-600/90 text-white'
+                                }`}>
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="ml-1">
+                                    <path d="M8 5v14l11-7z"/>
+                                  </svg>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col py-1">
+                              <h4 className={`text-sm font-bold line-clamp-2 transition-colors ${
+                                theme === 'luxury' 
+                                  ? 'text-[#D6C7B9] group-hover:text-[#A58B74]' 
+                                  : 'text-slate-800 dark:text-slate-200 group-hover:text-red-600 dark:group-hover:text-red-400'
+                              }`}>
+                                {video.title}
+                              </h4>
+                              
+                              <div className={`text-[10px] mt-2 font-bold tracking-widest uppercase flex items-center gap-1.5 ${
+                                theme === 'luxury' ? 'text-[#6E7381]' : 'text-slate-500 dark:text-slate-400'
+                              }`}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className={theme === 'luxury' ? 'text-[#A58B74]' : 'text-red-500'}>
+                                   <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/>
+                                </svg>
+                                Watch Tutorial
+                              </div>
+                            </div>
+                          </a>
+                        );
+                      })
+                    ) : dayPlan.youtube_query ? (
+                      <a 
+                        href={`https://www.youtube.com/results?search_query=${dayPlan.youtube_query}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className={`mt-4 inline-flex items-center gap-2 text-sm font-bold transition-colors ${
+                          theme === 'luxury' ? 'text-[#A58B74] hover:text-[#C8B3A2]' : 'text-red-500 hover:text-red-600'
+                        }`}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21.582 6.186a2.684 2.684 0 0 0-1.884-1.895C17.973 3.84 12 3.84 12 3.84s-5.973 0-7.698.451a2.684 2.684 0 0 0-1.884 1.895C2 7.925 2 12 2 12s0 4.075.418 5.814a2.684 2.684 0 0 0 1.884 1.895c1.725.451 7.698.451 7.698.451s5.973 0 7.698-.451a2.684 2.684 0 0 0 1.884-1.895C22 16.075 22 12 22 12s0-4.075-.418-5.814zM9.995 15.394V8.606l6.302 3.394-6.302 3.394z"/></svg>
+                        Search YouTube: "{dayPlan.youtube_query}"
+                      </a>
+                    ) : null}
+
                   </div>
               ))}
             </div>
@@ -375,15 +431,12 @@ function App() {
         </section>
       </main>
 
-      
-      {/* INTERACTIVE SECTION: CHAT, QUIZ, & VIVA */}
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 mt-10">
         <ChatLounge extractedText={fullSyllabusText} theme={theme} />
         <QuizArena extractedText={fullSyllabusText} theme={theme} />
         <VivaVoce extractedText={fullSyllabusText} theme={theme} />
       </div>
 
-      {/* ADAPTIVE DEVELOPER CONTACT FOOTER */}
       <footer className={`max-w-6xl mx-auto mt-12 mb-8 backdrop-blur-xl rounded-3xl p-8 shadow-xl transition-colors duration-500 flex flex-col items-center ${
         theme === 'luxury' 
           ? 'bg-[#1A1C23] border border-[#3A312A]' 
@@ -395,8 +448,6 @@ function App() {
           Connect with the Developer
         </h3>
         <div className="flex flex-wrap justify-center gap-4">
-          
-          {/* Email */}
           <a href="mailto:antarikshshrivas2006@gmail.com" className={`group px-6 py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none ${
             theme === 'luxury'
               ? 'bg-[#14151A] border border-[#4A3B32] text-[#A58B74] hover:border-[#8C725D] hover:bg-[#1C1E26] hover:text-[#C8B3A2]'
@@ -405,8 +456,6 @@ function App() {
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:scale-110"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><path d="m2 4 10 8 10-8"></path></svg>
             Email
           </a>
-
-          {/* Phone */}
           <a href="tel:+918875788751" className={`group px-6 py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none ${
             theme === 'luxury'
               ? 'bg-[#14151A] border border-[#4A3B32] text-[#A58B74] hover:border-[#8C725D] hover:bg-[#1C1E26] hover:text-[#C8B3A2]'
@@ -415,8 +464,6 @@ function App() {
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:scale-110"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
             Phone
           </a>
-
-          {/* LinkedIn */}
           <a href="https://www.linkedin.com/in/code-from-space" target="_blank" rel="noopener noreferrer" className={`group px-6 py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none ${
             theme === 'luxury'
               ? 'bg-[#14151A] border border-[#4A3B32] text-[#A58B74] hover:border-[#8C725D] hover:bg-[#1C1E26] hover:text-[#C8B3A2]'
@@ -425,8 +472,6 @@ function App() {
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:scale-110"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle></svg>
             LinkedIn
           </a>
-
-          {/* Instagram */}
           <a href="https://instagram.com/antariksh._911" target="_blank" rel="noopener noreferrer" className={`group px-6 py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none ${
             theme === 'luxury'
               ? 'bg-[#14151A] border border-[#4A3B32] text-[#A58B74] hover:border-[#8C725D] hover:bg-[#1C1E26] hover:text-[#C8B3A2]'
@@ -435,8 +480,6 @@ function App() {
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:scale-110"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
             Instagram
           </a>
-
-          {/* X / Twitter */}
           <a href="https://x.com/elonmusk" target="_blank" rel="noopener noreferrer" className={`group px-6 py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center gap-3 shadow-sm dark:shadow-none ${
             theme === 'luxury'
               ? 'bg-[#14151A] border border-[#4A3B32] text-[#A58B74] hover:border-[#8C725D] hover:bg-[#1C1E26] hover:text-[#C8B3A2]'
@@ -445,10 +488,8 @@ function App() {
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="transition-transform group-hover:scale-110"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"></path></svg>
             Twitter
           </a>
-
         </div>
       </footer>
-
     </div>
   );
 }
